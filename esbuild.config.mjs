@@ -1,5 +1,6 @@
 import esbuild from "esbuild";
 import process from "process";
+import fs from "fs"
 import builtins from "builtin-modules";
 
 const banner = `/*
@@ -9,13 +10,20 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = process.argv[2] === "production";
+const testVaultPluginDir = "test-red-vault/.obsidian/plugins/red"
+const copyToTestVault = () => {
+  fs.copyFileSync("main.js", `${testVaultPluginDir}/main.js`);
+  fs.copyFileSync("styles.css", `${testVaultPluginDir}/styles.css`);
+  fs.copyFileSync("manifest.json", `${testVaultPluginDir}/manifest.json`);
+  console.log(`Copied build to ${testVaultPluginDir}`);
+}
 
 esbuild
   .build({
     banner: {
       js: banner,
     },
-    entryPoints: ["main.ts"],
+    entryPoints: ["src/main.ts"],
     bundle: true,
     external: [
       "obsidian",
@@ -44,11 +52,14 @@ esbuild
       ...builtins,
     ],
     format: "cjs",
-    watch: !prod,
+    watch: !prod && {
+      onRebuild(error, result) { !error && copyToTestVault() },
+    },
     target: "es2016",
     logLevel: "info",
     sourcemap: prod ? false : "inline",
     treeShaking: true,
     outfile: "main.js",
   })
+  .then(copyToTestVault)
   .catch(() => process.exit(1));
