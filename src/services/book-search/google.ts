@@ -1,5 +1,3 @@
-// import { } from "obsidian"
-
 export type SearchResult = {
   title: string;
   subtitle: string | null;
@@ -29,7 +27,6 @@ export async function search(term: string): Promise<WrappedResults[]> {
 
   const res = await fetch(url);
   const json: { items: WrappedResults[] } = await res.json();
-  console.log(json);
   return json.items;
 }
 

@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { slide } from "svelte/transition";
   import { SearchResult } from "src/services/book-search/google";
 
   export let result: SearchResult;
 </script>
 
-<li transition:slide on:click>
+<div on:click>
   <div class="red-search-result">
     <div class="red-search-thumbnail">
       <img
@@ -18,22 +17,12 @@
       {#if result.subtitle}
         <p>{result.subtitle}</p>
       {/if}
-      <p>{result.authors.join(", ")}</p>
+      <p>{result.authors ? result.authors.join(", ") : ""}</p>
     </div>
   </div>
-</li>
+</div>
 
 <style>
-  li {
-    cursor: pointer;
-    padding: 0;
-    margin: 8px 0;
-  }
-
-  li:hover {
-    background-color: var(--interactive-hover);
-  }
-
   .red-search-result {
     display: flex;
     flex-direction: row;

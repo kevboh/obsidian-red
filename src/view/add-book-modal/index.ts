@@ -1,5 +1,5 @@
 import { App, Modal } from "obsidian";
-import { addBook } from "src/library/add";
+import { addBook, BookToAdd } from "src/library/add";
 
 import AddBook from "./AddBook.svelte";
 
@@ -11,8 +11,8 @@ export class AddBookModal extends Modal {
   onOpen() {
     const context = new Map();
 
-    context.set("addBook", (title: string) => {
-      addBook(this.app, title);
+    context.set("addBook", (book: BookToAdd) => {
+      addBook(this.app, book);
       this.close();
     });
 
