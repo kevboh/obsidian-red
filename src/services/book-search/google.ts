@@ -22,7 +22,7 @@ const LIMITED_FIELDS =
   "items(id,volumeInfo(title,subtitle,authors,description,industryIdentifiers,imageLinks))";
 
 export async function search(term: string): Promise<WrappedResults[]> {
-  console.log(`Searching ${term}`);
+  // console.log(`Searching ${term}`);
   const url = `https://www.googleapis.com/books/v1/volumes?q=${term}&fields=${LIMITED_FIELDS}`;
 
   const res = await fetch(url);

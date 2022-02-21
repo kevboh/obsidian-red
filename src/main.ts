@@ -1,16 +1,18 @@
 import { Plugin } from "obsidian";
 
 import { AddBookModal } from "./view/add-book-modal";
-import { RedSettingsTab } from "./view/settings-tab";
+import { RedSettingsTab } from "./view/settings";
 
 // Remember to rename these classes and interfaces!
 
-interface RedSettings {
-  mySetting: string;
+export interface RedSettings {
+  libraryFolder: string;
+  template: string | null;
 }
 
 const DEFAULT_SETTINGS: RedSettings = {
-  mySetting: "default",
+  libraryFolder: "books",
+  template: null,
 };
 
 export default class Red extends Plugin {

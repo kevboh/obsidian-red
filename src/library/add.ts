@@ -1,11 +1,7 @@
 import { App, normalizePath, stringifyYaml } from "obsidian";
 import { pickBy } from "lodash";
 
-// these will be preferences
-const BOOKS_FOLDER = "books";
-const BOOK_CORE_TEMPLATE = "core-templates/Core Template Book.md";
-const BOOK_TEMPLATER_TEMPLATE =
-  "templater-templates/Templater Template Book.md";
+import type { RedSettings } from "src/main";
 
 export type Readthrough = {
   start: string | null;
@@ -23,9 +19,12 @@ export type BookToAdd = {
 };
 
 export async function addBook(app: App, book: BookToAdd) {
+  // Get preferences
+  const settings: RedSettings = (app as any).plugins.getPlugin("red").settings;
+
   // Create the note
   const normalizedName = book.title.replace(/[\/\\:]/g, "-");
-  const path = normalizePath(`${BOOKS_FOLDER}/${normalizedName}.md`);
+  const path = normalizePath(`${settings.libraryFolder}/${normalizedName}.md`);
 
   const tokens: [string, string][] = [
     ["title", book.title],
@@ -39,9 +38,9 @@ export async function addBook(app: App, book: BookToAdd) {
 
   let contents = "";
   if (isTemplaterEnabled(app)) {
-    contents = await createWithTemplater(app, path, tokens);
+    contents = await createWithTemplater(app, path, settings.template, tokens);
   } else if (isTemplatesEnabled(app)) {
-    contents = await createWithTemplates(app, tokens);
+    contents = await createWithTemplates(app, settings.template, tokens);
   }
 
   await app.vault.adapter.write(path, contents);
@@ -60,6 +59,7 @@ function isTemplatesEnabled(app: App): boolean {
 async function createWithTemplater(
   app: App,
   path: string,
+  templatePath: string,
   tokens: [string, string][]
 ): Promise<string> {
   const templaterPlugin = (app as any).plugins.getPlugin("templater-obsidian");
@@ -67,7 +67,7 @@ async function createWithTemplater(
     console.error("[Red] Attempted to use Templater plugin while disabled.");
     return;
   }
-  const template = app.vault.getAbstractFileByPath(BOOK_TEMPLATER_TEMPLATE);
+  const template = app.vault.getAbstractFileByPath(templatePath);
 
   const createdNote = await app.vault.create(path, "");
   const runningConfig = templaterPlugin.templater.create_running_config(
@@ -85,6 +85,7 @@ async function createWithTemplater(
 
 async function createWithTemplates(
   app: App,
+  templatePath: string,
   tokens: [string, string][]
 ): Promise<string> {
   const corePlugin = (app as any).internalPlugins.getPluginById("templates");
@@ -95,7 +96,7 @@ async function createWithTemplates(
     return;
   }
   // Get template body
-  const contents = await app.vault.adapter.read(BOOK_CORE_TEMPLATE);
+  const contents = await app.vault.adapter.read(templatePath);
 
   // Replace {{date}} and {{time}}
   const dateFormat = corePlugin.instance.options["dateFormat"] || "YYYY-MM-DD";
