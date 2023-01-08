@@ -52,8 +52,7 @@ function isTemplaterEnabled(app: App): boolean {
 }
 
 function isTemplatesEnabled(app: App): boolean {
-  const corePlugin = (app as any).internalPlugins.getPluginById("templates");
-  return corePlugin && corePlugin.enabled;
+  return !!(app as any).internalPlugins.getEnabledPluginById("templates");
 }
 
 async function createWithTemplater(
@@ -88,8 +87,10 @@ async function createWithTemplates(
   templatePath: string,
   tokens: [string, string][]
 ): Promise<string> {
-  const corePlugin = (app as any).internalPlugins.getPluginById("templates");
-  if (!corePlugin || !corePlugin.enabled) {
+  const corePlugin = (app as any).internalPlugins.getEnabledPluginById(
+    "templates"
+  );
+  if (!corePlugin) {
     console.error(
       "[Red] Attempted to use core template plugin while disabled."
     );
@@ -99,8 +100,8 @@ async function createWithTemplates(
   const contents = await app.vault.adapter.read(templatePath);
 
   // Replace {{date}} and {{time}}
-  const dateFormat = corePlugin.instance.options["dateFormat"] || "YYYY-MM-DD";
-  const timeFormat = corePlugin.instance.options["timeFormat"] || "HH:mm";
+  const dateFormat = corePlugin.options["dateFormat"] || "YYYY-MM-DD";
+  const timeFormat = corePlugin.options["timeFormat"] || "HH:mm";
 
   const dateString = window.moment().format(dateFormat);
   const timeString = window.moment().format(timeFormat);
