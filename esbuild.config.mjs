@@ -1,6 +1,6 @@
 import esbuild from "esbuild";
 import process from "process";
-import fs from "fs"
+import fs from "fs";
 import builtins from "builtin-modules";
 import esbuildSvelte from "esbuild-svelte";
 import sveltePreprocess from "svelte-preprocess";
@@ -12,13 +12,13 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = process.argv[2] === "production";
-const testVaultPluginDir = "test-red-vault/.obsidian/plugins/red"
+const testVaultPluginDir = "test-red-vault/.obsidian/plugins/red";
 const copyToTestVault = () => {
   fs.copyFileSync("main.js", `${testVaultPluginDir}/main.js`);
   fs.copyFileSync("styles.css", `${testVaultPluginDir}/styles.css`);
   fs.copyFileSync("manifest.json", `${testVaultPluginDir}/manifest.json`);
   console.log(`Copied build to ${testVaultPluginDir}`);
-}
+};
 
 esbuild
   .build({
@@ -31,43 +31,35 @@ esbuild
       "obsidian",
       "electron",
       "@codemirror/autocomplete",
-      "@codemirror/closebrackets",
       "@codemirror/collab",
       "@codemirror/commands",
-      "@codemirror/comment",
-      "@codemirror/fold",
-      "@codemirror/gutter",
-      "@codemirror/highlight",
-      "@codemirror/history",
       "@codemirror/language",
       "@codemirror/lint",
-      "@codemirror/matchbrackets",
-      "@codemirror/panel",
-      "@codemirror/rangeset",
-      "@codemirror/rectangular-selection",
       "@codemirror/search",
       "@codemirror/state",
-      "@codemirror/stream-parser",
-      "@codemirror/text",
-      "@codemirror/tooltip",
       "@codemirror/view",
+      "@lezer/common",
+      "@lezer/highlight",
+      "@lezer/lr",
       ...builtins,
     ],
     format: "cjs",
     watch: !prod && {
-      onRebuild(error) { !error && copyToTestVault() },
+      onRebuild(error) {
+        !error && copyToTestVault();
+      },
     },
-    target: "es2016",
+    target: "es2018",
     logLevel: "info",
     sourcemap: prod ? false : "inline",
     treeShaking: true,
     outfile: "main.js",
     plugins: [
       esbuildSvelte({
-        compilerOptions: {css: true},
+        compilerOptions: { css: true },
         preprocess: sveltePreprocess(),
       }),
-    ]
+    ],
   })
   .then(copyToTestVault)
   .catch(() => process.exit(1));
