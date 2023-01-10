@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { debounce } from "lodash";
+  import { debounce } from "obsidian";
   import { getContext, onMount } from "svelte";
   import { slide } from "svelte/transition";
 
@@ -23,7 +23,7 @@
   let start = window.moment().format("YYYY-MM-DD");
   let end = window.moment().format("YYYY-MM-DD");
 
-  const doSearch = debounce(async (term) => {
+  const doSearch = debounce(async (term: string) => {
     results = await search(term);
   }, 400);
 

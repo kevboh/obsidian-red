@@ -1,7 +1,6 @@
-import { App, normalizePath, stringifyYaml } from "obsidian";
-import { pickBy } from "lodash";
+import { App, normalizePath, TFile, moment } from "obsidian";
 
-import type { RedSettings } from "src/main";
+import type { RedSettings } from "src/settings/red-settings";
 
 export type Readthrough = {
   start: string | null;
@@ -26,24 +25,70 @@ export async function addBook(app: App, book: BookToAdd) {
   const normalizedName = book.title.replace(/[\/\\:]/g, "-");
   const path = normalizePath(`${settings.libraryFolder}/${normalizedName}.md`);
 
-  const tokens: [string, string][] = [
-    ["title", book.title],
-    ["subtitle", book.subtitle],
-    ["authors", generateAuthorYAML(book.authors)],
-    ["isbn", book.isbn],
-    ["cover", book.cover],
-    ["readthroughs", generateReadthroughYAML(book.readthroughs)],
-    ["status", book.status],
-  ];
-
+  const createdNote = await app.vault.create(path, "");
   let contents = "";
   if (isTemplaterEnabled(app)) {
-    contents = await createWithTemplater(app, path, settings.template, tokens);
+    contents = await createWithTemplater(app, createdNote, settings.template);
   } else if (isTemplatesEnabled(app)) {
-    contents = await createWithTemplates(app, settings.template, tokens);
+    contents = await createWithTemplates(app, settings.template);
   }
 
   await app.vault.adapter.write(path, contents);
+
+  await app.fileManager.processFrontMatter(createdNote, (fm) => {
+    // title
+    fm["title"] = book.title;
+
+    // subtitle
+    if (book.subtitle && book.subtitle.length > 0) {
+      fm["subtitle"] = book.subtitle;
+    }
+
+    // authors/author
+    if (book.authors.length > 1) {
+      fm["authors"] = book.authors;
+    } else if (book.authors.length === 1) {
+      fm["author"] = book.authors[0];
+    }
+
+    // status
+    fm["status"] = book.status;
+
+    // readthroughs
+    if (book.readthroughs.length > 1) {
+      const rts = [];
+      for (const readthrough of book.readthroughs) {
+        const rt: Record<string, string> = {};
+        if (readthrough.start) {
+          rt["start"] = readthrough.start;
+        }
+        if (readthrough.end) {
+          rt["end"] = readthrough.end;
+        }
+        rts.push(rt);
+      }
+      fm["readthroughs"] = rts;
+    } else if (book.readthroughs.length === 1) {
+      const rt = book.readthroughs[0];
+      if (rt.start) {
+        fm["start"] = rt.start;
+      }
+      if (rt.end) {
+        fm["end"] = rt.end;
+      }
+    }
+
+    // isbn
+    if (book.isbn) {
+      fm["isbn"] = book.isbn;
+    }
+
+    // cover
+    if (book.cover) {
+      fm["cover"] = book.cover;
+    }
+  });
+
   await app.workspace.openLinkText(path, "/", false);
 }
 
@@ -57,9 +102,8 @@ function isTemplatesEnabled(app: App): boolean {
 
 async function createWithTemplater(
   app: App,
-  path: string,
-  templatePath: string,
-  tokens: [string, string][]
+  file: TFile,
+  templatePath: string
 ): Promise<string> {
   const templaterPlugin = (app as any).plugins.getPlugin("templater-obsidian");
   if (!templaterPlugin) {
@@ -68,24 +112,17 @@ async function createWithTemplater(
   }
   const template = app.vault.getAbstractFileByPath(templatePath);
 
-  const createdNote = await app.vault.create(path, "");
   const runningConfig = templaterPlugin.templater.create_running_config(
     template,
-    createdNote,
+    file,
     0
   );
-  const contents = await templaterPlugin.templater.read_and_parse_template(
-    runningConfig
-  );
-  const newContents = replace(contents, tokens);
-
-  return newContents;
+  return await templaterPlugin.templater.read_and_parse_template(runningConfig);
 }
 
 async function createWithTemplates(
   app: App,
-  templatePath: string,
-  tokens: [string, string][]
+  templatePath: string
 ): Promise<string> {
   const corePlugin = (app as any).internalPlugins.getEnabledPluginById(
     "templates"
@@ -97,59 +134,14 @@ async function createWithTemplates(
     return;
   }
   // Get template body
-  const contents = await app.vault.adapter.read(templatePath);
+  let contents = await app.vault.adapter.read(templatePath);
 
   // Replace {{date}} and {{time}}
   const dateFormat = corePlugin.options["dateFormat"] || "YYYY-MM-DD";
   const timeFormat = corePlugin.options["timeFormat"] || "HH:mm";
 
-  const dateString = window.moment().format(dateFormat);
-  const timeString = window.moment().format(timeFormat);
+  contents = contents.replace("{{date}}", moment().format(dateFormat));
+  contents = contents.replace("{{time}}", moment().format(timeFormat));
 
-  // Replace book data
-  const newContents = replace(contents, [
-    ["date", dateString],
-    ["time", timeString],
-    ...tokens,
-  ]);
-
-  return newContents;
-}
-
-function replace(contents: string, tokens: [string, string][]) {
-  let newContents = contents;
-  for (const [token, value] of tokens) {
-    if (value) {
-      newContents = newContents.replace(`{{${token}}}`, value);
-    }
-  }
-  return newContents;
-}
-
-function generateAuthorYAML(authors: string[]): string {
-  if (authors.length === 0) {
-    return "";
-  } else if (authors.length === 1) {
-    return `author: ${authors.first()}`;
-  } else {
-    return stringifyYaml({
-      authors: authors,
-    }).trim();
-  }
-}
-
-function generateReadthroughYAML(readthroughs: Readthrough[]): string {
-  if (readthroughs.length === 0) {
-    return "";
-  } else if (readthroughs.length === 1) {
-    return stringifyYaml(cleanYAML(readthroughs.first())).trim();
-  } else {
-    return stringifyYaml({
-      readthroughs: readthroughs.map((r) => cleanYAML(r)),
-    }).trim();
-  }
-}
-
-function cleanYAML(obj: any): any {
-  return pickBy(obj, (value, key) => !!value);
+  return contents;
 }
